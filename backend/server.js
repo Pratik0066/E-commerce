@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import path from 'path';
 import connectDB from './config/db.js';
 import productRoutes from './routes/productRoutes.js'; // Import your routes here
 
@@ -31,3 +32,9 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+const __dirname = path.resolve(); // Get current directory
+app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
+
+// Add the upload route
+import uploadRoutes from './routes/uploadRoutes.js';
+app.use('/api/upload', uploadRoutes);
