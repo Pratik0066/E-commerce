@@ -61,7 +61,9 @@ const createProduct = asyncHandler(async (req, res) => {
   res.status(201).json(createdProduct);
 });
 
-
+// @desc    Create new review
+// @route   POST /api/products/:id/reviews
+// @access  Private
 const createProductReview = asyncHandler(async (req, res) => {
   const { rating, comment } = req.body;
 
@@ -97,29 +99,50 @@ const createProductReview = asyncHandler(async (req, res) => {
   } else {
     res.status(404);
     throw new Error('Product not found');
-  };
+  }
+});
 
-
-  const getProducts = asyncHandler(async (req, res) => {
-  const pageSize = 8; // Number of products per page
+// @desc    Get all products (with pagination & search)
+// @route   GET /api/products
+// @access  Public
+const getProducts = asyncHandler(async (req, res) => {
+  const pageSize = 8;
   const page = Number(req.query.pageNumber) || 1;
 
-  // Search logic: If keyword exists, find products matching name
+
   const keyword = req.query.keyword
     ? {
         name: {
           $regex: req.query.keyword,
-          $options: 'i', // Case-insensitive
+          $options: 'i',
         },
       }
     : {};
-    const count = await Product.countDocuments({ ...keyword });
+
+  const count = await Product.countDocuments({ ...keyword });
   const products = await Product.find({ ...keyword })
     .limit(pageSize)
     .skip(pageSize * (page - 1));
 
   res.json({ products, page, pages: Math.ceil(count / pageSize) });
 });
-})
+const getProductById = asyncHandler(async (req, res) => {
+  const product = await Product.findById(req.params.id);
 
-export { updateProduct, deleteProduct, createProduct };
+  if (product) {
+    res.json(product);
+  } else {
+    res.status(404);
+    throw new Error('Product not found');
+  }
+});
+
+
+export {
+  updateProduct,
+  deleteProduct,
+  createProduct,
+  getProductById,
+  getProducts,
+  createProductReview,
+};

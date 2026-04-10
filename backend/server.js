@@ -38,3 +38,7 @@ app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
 // Add the upload route
 import uploadRoutes from './routes/uploadRoutes.js';
 app.use('/api/upload', uploadRoutes);
+import userRoutes from './routes/userRoutes.js';
+app.use('/api/users', userRoutes);
+import orderRoutes from './routes/orderRoutes.js';
+app.use('/api/orders', orderRoutes);    

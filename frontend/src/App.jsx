@@ -18,7 +18,7 @@ import OrderPage from './pages/OrderPage';
 // Admin Pages
 import OrderListPage from './pages/admin/OrderListPage';
 import ProductListPage from './pages/admin/ProductListPage';
-import ProductEditPage from './pages/ProductEditPage';
+import ProductEditPage from "./pages/admin/ProductEditPage";
 import UserListPage from './pages/admin/UserListPage';
 
 function App() {

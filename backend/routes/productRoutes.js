@@ -1,6 +1,16 @@
 import express from 'express';
 const router = express.Router();
+import {
+  getProducts,
+  getProductById,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  createProductReview,
+} from '../controllers/productController.js';
 import Product from '../models/Product.js';
+import { protect, admin } from '../middleware/authMiddleware.js'; // <-- add this line
+
 
 // @desc    Fetch all products
 // @route   GET /api/products
@@ -27,5 +37,11 @@ router.get('/:id', async (req, res) => {
         res.status(500).json({ message: 'Invalid Product ID' });
     }
 });
+// The route for /api/products
+router.route('/')
+  .get(getProducts)
+  .post(protect, admin, createProduct); // <--- ADD THIS LINE
+
+router.route('/:id').get(getProductById);
 
 export default router;

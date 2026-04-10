@@ -131,13 +131,13 @@ const ProductPage = () => {
           <h2 className="text-3xl font-black text-gray-900 mb-8 flex items-center gap-3">
             <MessageSquare className="text-blue-600" /> CUSTOMER FEEDBACK
           </h2>
-          {product.reviews.length === 0 && (
+          {product.reviews?.length === 0 && (
             <div className="bg-gray-50 p-8 rounded-2xl text-gray-400 font-medium">
               This product hasn't been reviewed yet. Be the first!
             </div>
           )}
           <div className="space-y-6">
-            {product.reviews.map((review) => (
+            {(product.reviews || []).map((review) => (
               <div key={review._id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                 <div className="flex justify-between items-start mb-4">
                   <div>

@@ -1,15 +1,9 @@
 import asyncHandler from '../middleware/asyncHandler.js';
-import Order from '../models/Order.js'; // Updated to match your file name
+import Order from '../models/orderModel.js';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 
-// Initialize Razorpay with your Test Keys
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
-
-// @desc    Create new order & Generate Razorpay Order ID
+// @desc    Create new order & initialize Razorpay order
 // @route   POST /api/orders
 // @access  Private
 const addOrderItems = asyncHandler(async (req, res) => {
@@ -27,20 +21,11 @@ const addOrderItems = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error('No order items');
   } else {
-    // 1. Create the Order in Razorpay first to get the ID
-    const options = {
-      amount: Math.round(totalPrice * 100), // Razorpay expects amount in paisa
-      currency: 'INR',
-      receipt: `receipt_${Date.now()}`,
-    };
-
-    const rzpOrder = await razorpay.orders.create(options);
-
-    // 2. Create the Order in your MongoDB
+    // 1. Create order in MongoDB
     const order = new Order({
       orderItems: orderItems.map((x) => ({
         ...x,
-        product: x._id, // Map frontend _id to product reference
+        product: x._id,
         _id: undefined,
       })),
       user: req.user._id,
@@ -50,12 +35,80 @@ const addOrderItems = asyncHandler(async (req, res) => {
       taxPrice,
       shippingPrice,
       totalPrice,
-      razorpayOrderId: rzpOrder.id, // Store the RZP ID for the frontend modal
     });
 
     const createdOrder = await order.save();
-    res.status(201).json(createdOrder);
+
+    // 2. Initialize Razorpay Instance
+    const instance = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+
+    const options = {
+      amount: Math.round(totalPrice * 100), // Amount in paise
+      currency: 'INR',
+      receipt: `receipt_${createdOrder._id}`,
+    };
+
+    const razorpayOrder = await instance.orders.create(options);
+
+    if (!razorpayOrder) {
+      res.status(500);
+      throw new Error('Error creating Razorpay order');
+    }
+
+    // Send both MongoDB order and Razorpay order info to frontend
+    res.status(201).json({
+      ...createdOrder._doc,
+      razorpayOrderId: razorpayOrder.id,
+    });
   }
+});
+
+// @desc    Verify Razorpay Payment Signature
+// @route   POST /api/orders/:id/verify
+// @access  Private
+const verifyPayment = asyncHandler(async (req, res) => {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+  const order = await Order.findById(req.params.id);
+
+  if (order) {
+    // Generate signature to compare with Razorpay's signature
+    const generated_signature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(razorpay_order_id + '|' + razorpay_payment_id)
+      .digest('hex');
+
+    if (generated_signature === razorpay_signature) {
+      order.isPaid = true;
+      order.paidAt = Date.now();
+      order.paymentResult = {
+        id: razorpay_payment_id,
+        status: 'success',
+        update_time: Date.now().toString(),
+        email_address: req.user.email,
+      };
+
+      const updatedOrder = await order.save();
+      res.json(updatedUser);
+    } else {
+      res.status(400);
+      throw new Error('Payment verification failed (Signature mismatch)');
+    }
+  } else {
+    res.status(404);
+    throw new Error('Order not found');
+  }
+});
+
+// @desc    Get logged in user orders
+// @route   GET /api/orders/myorders
+// @access  Private
+const getMyOrders = asyncHandler(async (req, res) => {
+  const orders = await Order.find({ user: req.user._id });
+  res.json(orders);
 });
 
 // @desc    Get order by ID
@@ -63,7 +116,6 @@ const addOrderItems = asyncHandler(async (req, res) => {
 // @access  Private
 const getOrderById = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id).populate('user', 'name email');
-
   if (order) {
     res.json(order);
   } else {
@@ -72,35 +124,14 @@ const getOrderById = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Update order to paid (Verify Signature)
-// @route   PUT /api/orders/:id/pay
-// @access  Private
-const updateOrderToPaid = asyncHandler(async (req, res) => {
-  const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
-
-  // 1. Verification Step
-  const hmac = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET);
-  hmac.update(razorpay_order_id + "|" + razorpay_payment_id);
-  const generated_signature = hmac.digest('hex');
-
-  if (generated_signature !== razorpay_signature) {
-    res.status(400);
-    throw new Error('Payment verification failed! Transaction is not legitimate.');
-  }
-
-  // 2. Update Database Order
+// @desc    Update order to delivered
+// @route   PUT /api/orders/:id/deliver
+// @access  Private/Admin
+const updateOrderToDelivered = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id);
-
   if (order) {
-    order.isPaid = true;
-    order.paidAt = Date.now();
-    order.paymentResult = {
-      id: razorpay_payment_id,
-      status: 'success',
-      update_time: Date.now(),
-      email_address: req.user.email,
-    };
-
+    order.isDelivered = true;
+    order.deliveredAt = Date.now();
     const updatedOrder = await order.save();
     res.json(updatedOrder);
   } else {
@@ -109,14 +140,9 @@ const updateOrderToPaid = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Get logged in user orders
-// @route   GET /api/orders/mine
-// @access  Private
-const getMyOrders = asyncHandler(async (req, res) => {
-  const orders = await Order.find({ user: req.user._id });
-  res.json(orders);
-});
-
+// @desc    Get all orders
+// @route   GET /api/orders
+// @access  Private/Admin
 const getOrders = asyncHandler(async (req, res) => {
   const orders = await Order.find({}).populate('user', 'id name');
   res.json(orders);
@@ -124,8 +150,9 @@ const getOrders = asyncHandler(async (req, res) => {
 
 export {
   addOrderItems,
-  getOrderById,
-  updateOrderToPaid,
   getMyOrders,
+  getOrderById,
+  verifyPayment,
+  updateOrderToDelivered,
   getOrders,
 };

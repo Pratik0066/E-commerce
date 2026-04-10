@@ -1,15 +1,22 @@
+import { PRODUCTS_URL } from '../constants';
 import { apiSlice } from './apiSlice';
 
 export const productsApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     // GET all products
     getProducts: builder.query({
-      query: ({ keyword, pageNumber }) => ({
+      query: ({ keyword, pageNumber } = {}) => ({
         url: '/api/products',
         params: { keyword, pageNumber },
       }),
       keepUnusedDataFor: 5,
       providesTags: ['Products'],
+    }),
+    getProductDetails: builder.query({
+      query: (productId) => ({
+        url: `${PRODUCTS_URL}/${productId}`,
+      }),
+      keepUnusedDataFor: 5,
     }),
     
     createProduct: builder.mutation({
@@ -52,4 +59,6 @@ export const productsApiSlice = apiSlice.injectEndpoints({
 });
 
 // Export the "Hooks" that Redux generates automatically
-export const { useGetProductsQuery, useGetProductDetailsQuery, useCreateProductMutation, useUpdateProductMutation, useDeleteProductMutation, useCreateReviewMutation } = productsApiSlice;
+export const { useGetProductsQuery, useGetProductDetailsQuery, useCreateProductMutation, useUpdateProductMutation, useDeleteProductMutation, useCreateReviewMutation,
+useUploadProductImageMutation
+ } = productsApiSlice;
