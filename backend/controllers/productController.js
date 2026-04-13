@@ -137,12 +137,61 @@ const getProductById = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Get AI-based product recommendations
+// @route   GET /api/products/:id/recommendations
+const getRecommendations = asyncHandler(async (req, res) => {
+  const product = await Product.findById(req.params.id);
+
+  if (product) {
+    // Simple AI Logic: Find products in the same category, 
+    // excluding the current one, and limit to 4.
+    const recommendations = await Product.find({
+      category: product.category,
+      _id: { $ne: product._id }
+    }).limit(4);
+
+    res.json(recommendations);
+  } else {
+    res.status(404);
+    throw new Error('Product not found');
+  }
+});
+// @desc    AI Chat search for products
+// @route   POST /api/products/chat
+const getChatResponse = asyncHandler(async (req, res) => {
+  const { message } = req.body;
+
+  // Simple "AI" Logic: Extract keywords and search DB
+  const keywords = message.split(' ').filter(word => word.length > 3);
+  
+  const products = await Product.find({
+    $or: [
+      { name: { $regex: keywords.join('|'), $options: 'i' } },
+      { category: { $regex: keywords.join('|'), $options: 'i' } },
+      { brand: { $regex: keywords.join('|'), $options: 'i' } }
+    ]
+  }).limit(3);
+
+  if (products.length > 0) {
+    res.json({
+      reply: `I found ${products.length} products that match your request!`,
+      products
+    });
+  } else {
+    res.json({
+      reply: "I couldn't find an exact match, but check out our latest electronics collection!",
+      products: []
+    });
+  }
+});
 
 export {
   updateProduct,
   deleteProduct,
   createProduct,
+  getChatResponse,
   getProductById,
   getProducts,
   createProductReview,
+  getRecommendations
 };

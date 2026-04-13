@@ -1,5 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Header from './components/Header.jsx';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Public & Auth Pages
 import HomePage from './pages/HomePage';
@@ -20,11 +22,13 @@ import OrderListPage from './pages/admin/OrderListPage';
 import ProductListPage from './pages/admin/ProductListPage';
 import ProductEditPage from "./pages/admin/ProductEditPage";
 import UserListPage from './pages/admin/UserListPage';
+import AIChatBot from './components/AIChatBot';
 
 function App() {
   return (
     <Router>
       <Header />
+      <ToastContainer autoClose={2000} />
       <main className="container mx-auto px-6 py-8 min-h-[80vh]">
         <Routes>
           {/* Public Routes */}
@@ -62,6 +66,7 @@ function App() {
           </p>
         </div>
       </footer>
+      <AIChatBot /> {/* Add it here */}
     </Router>
   );
 }

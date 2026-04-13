@@ -1,7 +1,19 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart } from 'lucide-react';
+import { useDispatch } from 'react-redux'; // 1. Import useDispatch
+import { addToCart } from '../slices/cartSlice'; // 2. Import your cart action
 
 const ProductCard = ({ product }) => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  // 3. Define the Handler
+  const addToCartHandler = () => {
+    // We default qty to 1 when adding directly from the card
+    dispatch(addToCart({ ...product, qty: 1 }));
+    
+  };
+
   return (
     <div className="group relative bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
       {/* Image Container */}
@@ -29,7 +41,7 @@ const ProductCard = ({ product }) => {
               </h3>
             </Link>
           </div>
-          <span className="text-xl font-black text-gray-900">${product.price}</span>
+          <span className="text-xl font-black text-gray-900">₹{product.price.toFixed(2)}</span>
         </div>
 
         <div className="flex items-center gap-1 mb-4">
@@ -38,7 +50,9 @@ const ProductCard = ({ product }) => {
           <span className="text-xs text-gray-400">({product.numReviews})</span>
         </div>
 
+        {/* 4. Attach the Handler to the button */}
         <button 
+          onClick={addToCartHandler} 
           disabled={product.countInStock === 0}
           className={`w-full py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors ${
             product.countInStock > 0 

@@ -1,8 +1,11 @@
 import { useGetProductsQuery, useDeleteProductMutation, useCreateProductMutation } from '../../slices/productsApiSlice';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate} from 'react-router-dom';
 import { Edit, Trash2, Plus, Package } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 const ProductListPage = () => {
+
+  const navigate = useNavigate();
   const { data: products, isLoading, error, refetch } = useGetProductsQuery();
   const [deleteProduct, { isLoading: loadingDelete }] = useDeleteProductMutation();
   const [createProduct, { isLoading: loadingCreate }] = useCreateProductMutation();
@@ -18,16 +21,21 @@ const ProductListPage = () => {
     }
   };
 
-  const createProductHandler = async () => {
-    if (window.confirm('Create a new sample product?')) {
-      try {
-        await createProduct();
-        refetch();
-      } catch (err) {
-        alert(err?.data?.message || err.error);
-      }
+
+
+const createProductHandler = async () => {
+  if (window.confirm('Are you sure you want to create a new product?'))
+     {
+    try {
+      const res = await createProduct().unwrap();
+      // res contains the sample product. 
+      // We need to navigate to the Edit page immediately!
+      navigate(`/admin/product/${res._id}/edit`); 
+    } catch (err) {
+      toast.error(err?.data?.message || err.error);
     }
-  };
+  }
+};
 
   return (
     <div className="container mx-auto px-6 py-8">
@@ -42,6 +50,8 @@ const ProductListPage = () => {
         >
           <Plus size={20} /> Create Product
         </button>
+
+        
       </div>
 
       {isLoading ? (
@@ -56,7 +66,7 @@ const ProductListPage = () => {
                 <th className="px-6 py-4 font-black">Price</th>
                 <th className="px-6 py-4 font-black">Category</th>
                 <th className="px-6 py-4 font-black">Brand</th>
-                <th className="px-6 py-4"></th>
+                <th className="px-6 py-4">Edit</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
